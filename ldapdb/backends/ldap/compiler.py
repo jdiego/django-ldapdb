@@ -15,7 +15,8 @@ from ldapdb import escape_ldap_filter
 from ldapdb.models.fields import ListField
 
 _ORDER_BY_LIMIT_OFFSET_RE = re.compile(
-    r'(?:\bORDER BY\b\s+(.+?))?\s*(?:\bLIMIT\b\s+(-?\d+))?\s*(?:\bOFFSET\b\s+(\d+))?$')
+    r"(?:\bORDER BY\b\s+([\w\.]+)\s(?P<order>\bASC\b)|(\bDESC\b))\s{1,2}(?:\bLIMIT\b\s+(?P<limit>-?\d+))?[\)\s]?(?:\bOFFSET\b\s+(?P<offset>(\d+)))?"  # noqa: E501
+)
 
 
 class LdapDBError(Exception):
@@ -146,12 +147,13 @@ class SQLCompiler(compiler.SQLCompiler):
                 if hasattr(self.query, 'subquery') and self.query.subquery:
                     sql = self.query.subquery
                 m = _ORDER_BY_LIMIT_OFFSET_RE.search(sql)
-                limit = m.group(2)
-                offset = m.group(3)
-                if limit and int(limit) >= 0:
-                    output.append(int(limit))
-                elif offset:
-                    output.append(len(vals) - int(offset))
+                if m:
+                    limit = m.group('limit')
+                    offset = m.group('offset')
+                    if limit and int(limit) >= 0:
+                        output.append(int(limit))
+                    elif offset:
+                        output.append(len(vals) - int(offset))
                 else:
                     output.append(len(vals))
             else:
@@ -231,7 +233,7 @@ class SQLCompiler(compiler.SQLCompiler):
                 if isinstance(e[0], aggregates.Count):
                     value = 0
                     input_field = e[0].get_source_expressions()[0].field
-                    if input_field.attname == 'dn':
+                    if input_field.get_attname() == 'dn':
                         value = 1
                     elif hasattr(input_field, 'from_ldap'):
                         result = input_field.from_ldap(
@@ -243,7 +245,7 @@ class SQLCompiler(compiler.SQLCompiler):
                                 value = len(result)
                     row.append(value)
                 else:
-                    if e[0].field.attname == 'dn':
+                    if e[0].field.get_attname() == 'dn':
                         row.append(dn)
                     elif hasattr(e[0].field, 'from_ldap'):
                         row.append(e[0].field.from_ldap(
