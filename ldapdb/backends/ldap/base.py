@@ -225,6 +225,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         self.charset = "utf-8"
 
         self.settings_dict['SUPPORTS_TRANSACTIONS'] = True
+        self.settings_dict['AUTOCOMMIT'] = True
         self.autocommit = True
         # Default page size of 1000 items, ActiveDirectory's default
         # See https://support.microsoft.com/en-us/help/315071/how-to-view-and-set-ldap-policy-in-active-directory-by-using-ntdsutil.exe  # noqa
